@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tilt Golf Prototype - Single File</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden; /* Prevent scrolling when tilting */
+            background-color: #1a7a1f; /* Golf green */
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #game-area {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            /* Initially hidden by JavaScript */
+            display: none;
+        }
+
+        /* === Game Elements === */
+        #ball {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #f0f0f0; /* White/Silver for golf ball */
+            border: 1px solid #333;
+            z-index: 10;
+        }
+
+        #hole {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #000; /* Black hole */
+            border: 4px dashed #fff; /* White dashed border */
+            top: 500px; /* Example starting position */
+            left: 200px;
+        }
+
+        .trap {
+            position: absolute;
+            border-radius: 5px;
+            z-index: 5;
+        }
+
+        .water-trap {
+            background: #007bff; /* Blue water */
+            border: 2px solid #0056b3;
+        }
+
+        .sand-trap {
+            background: #f4d03f; /* Yellow/tan sand */
+            border-radius: 50%; /* Make sand trap round */
+        }
+
+        /* === Menu/Overlay Styles === */
+        #start-menu, #game-over {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 100;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin-top: 20px;
+            font-size: 1.1em;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div id="start-menu">
+            <h1>Tilt Golf</h1>
+            <p>Guide the ball to the hole by tilting your phone.</p>
+            <button onclick="startGame()">Start Game</button>
+        </div>
+
+        <div id="game-area">
+            <div id="ball"></div>
+            <div id="hole"></div>
+            <div class="trap water-trap" style="top: 100px; left: 100px; width: 100px; height: 50px;"></div>
+            <div class="trap sand-trap" style="top: 300px; left: 50px; width: 80px; height: 80px;"></div>
+            </div>
+
+        <div id="game-over" style="display: none;">
+            <h2>You Win!</h2>
+            <button onclick="resetGame()">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        // --- Game State Variables ---
+        let ballX = 50;
+        let ballY = 50;
+        let speed = 0.5; // Controls how fast the ball moves
+        let friction = 0.98; // Slows the ball down
+        let velocityX = 0;
+        let velocityY = 0;
+
+        // --- DOM Elements ---
+        const ball = document.getElementById('ball');
+        const gameArea = document.getElementById('game-area');
+        const startMenu = document.getElementById('start-menu');
+        const gameOver = document.getElementById('game-over');
+        let gameActive = false;
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set initial position of the ball
+            ball.style.left = ballX + 'px';
+            ball.style.top = ballY + 'px';
+        });
+
+
+        // --- Game Controls ---
+        function startGame() {
+            startMenu.style.display = 'none';
+            gameArea.style.display = 'block';
+            gameOver.style.display = 'none';
+            gameActive = true;
+            
+            // Request permission for motion sensors (required on iOS)
+            if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission()
+                    .then(permissionState => {
+                        if (permissionState === 'granted') {
+                            window.addEventListener('devicemotion', handleMotion);
+                        } else {
+                            alert("Motion access denied. Game cannot be played.");
+                        }
+                    })
+                    .catch(console.error);
+            } else {
+                // For Android and other devices
+                window.addEventListener('devicemotion', handleMotion);
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function resetGame() {
+            // Reset ball position (e.g., back to the top left)
+            ballX = 50;
+            ballY = 50;
+            velocityX = 0;
+            velocityY = 0;
+            ball.style.left = ballX + 'px';
+            ball.style.top = ballY + 'px';
+
+            // Hide game over, show game area
+            gameOver.style.display = 'none';
+            gameArea.style.display = 'block';
+            gameActive = true;
+            requestAnimationFrame(gameLoop);
+        }
+
+
+        // --- Sensor Handling ---
+        function handleMotion(event) {
+            if (!gameActive) return;
+
+            // Use acceleration including gravity (accelerationIncludingGravity)
+            // Beta (front to back tilt) affects Y velocity
+            // Gamma (left to right tilt) affects X velocity
+
+            const acceleration = event.accelerationIncludingGravity;
+
+            // --- Core Logic: Accelerate the ball based on phone tilt ---
+            // The negative sign in Y ensures tilting forward (positive beta) moves the ball up (negative Y direction)
+            velocityX += acceleration.x * speed;
+            velocityY += -acceleration.y * speed; 
+        }
+
+
+        // --- Main Game Loop ---
+        function gameLoop() {
+            if (!gameActive) return;
+
+            // 1. Apply Friction/Damping
+            velocityX *= friction;
+            velocityY *= friction;
+
+            // 2. Update Position
+            ballX += velocityX;
+            ballY += velocityY;
+
+            // 3. Handle Wall Collisions (Boundary Check)
+            const maxX = gameArea.clientWidth - ball.clientWidth;
+            const maxY = gameArea.clientHeight - ball.clientHeight;
+
+            if (ballX < 0) {
+                ballX = 0;
+                velocityX *= -0.5; // Bounce off wall
+            } else if (ballX > maxX) {
+                ballX = maxX;
+                velocityX *= -0.5; // Bounce off wall
+            }
+
+            if (ballY < 0) {
+                ballY = 0;
+                velocityY *= -0.5; // Bounce off wall
+            } else if (ballY > maxY) {
+                ballY = maxY;
+                velocityY *= -0.5; // Bounce off wall
+            }
+
+            // 4. Check for Traps/Hole (Collision Detection)
+            checkCollisions();
+
+            // 5. Update Ball Position on Screen
+            ball.style.left = ballX + 'px';
+            ball.style.top = ballY + 'px';
+
+            // Request next frame
+            requestAnimationFrame(gameLoop);
+        }
+
+        // --- Collision Logic ---
+        function checkCollisions() {
+            // Get dimensions and position
+            const ballRect = ball.getBoundingClientRect();
+            const holeRect = document.getElementById('hole').getBoundingClientRect();
+            const traps = document.querySelectorAll('.trap');
+
+            // ** HOLE COLLISION (Win Condition) **
+            // Check if the center of the ball is within the hole
+            if (
+                ballRect.x + ballRect.width / 2 > holeRect.x &&
+                ballRect.x + ballRect.width / 2 < holeRect.x + holeRect.width &&
+                ballRect.y + ballRect.height / 2 > holeRect.y &&
+                ballRect.y + ballRect.height / 2 < holeRect.y + holeRect.height
+            ) {
+                gameActive = false;
+                gameArea.style.display = 'none';
+                gameOver.style.display = 'block';
+                document.querySelector('#game-over h2').textContent = "In the Hole! You Win!";
+                return;
+            }
+
+            // ** TRAP COLLISION (Slowdown/Reset) **
+            traps.forEach(trap => {
+                const trapRect = trap.getBoundingClientRect();
+                
+                // Simple bounding box collision check
+                if (
+                    ballRect.x < trapRect.x + trapRect.width &&
+                    ballRect.x + ballRect.width > trapRect.x &&
+                    ballRect.y < trapRect.y + trapRect.height &&
+                    ballRect.y + ballRect.height > trapRect.y
+                ) {
+                    if (trap.classList.contains('water-trap')) {
+                        // Water Trap: Reset the ball back to the start
+                        velocityX = 0;
+                        velocityY = 0;
+                        resetGame(); 
+                        alert("Splash! Back to the tee.");
+                        return;
+                    } else if (trap.classList.contains('sand-trap')) {
+                        // Sand Trap: Slow down the ball significantly
+                        velocityX *= 0.5; 
+                        velocityY *= 0.5;
+                        // Reduce future acceleration while in sand
+                        speed = 0.1; 
+                        return;
+                    }
+                }
+            });
+
+            // Reset speed if not in any trap
+            let inTrap = false;
+            traps.forEach(trap => {
+                const trapRect = trap.getBoundingClientRect();
+                if (
+                    ballRect.x < trapRect.x + trapRect.width &&
+                    ballRect.x + ballRect.width > trapRect.x &&
+                    ballRect.y < trapRect.y + trapRect.height &&
+                    ballRect.y + ballRect.height > trapRect.y
+                ) {
+                    inTrap = true;
+                }
+            });
+            if (!inTrap && speed !== 0.5) {
+                speed = 0.5; // Restore normal speed
+            }
+        }
+    </script>
+</body>
+</html>
