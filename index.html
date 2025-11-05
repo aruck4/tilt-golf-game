@@ -426,26 +426,52 @@
                     bottom: wallRect.bottom - gameAreaRect.top
                 };
 
-                // Check collision at the proposed new position using relative coordinates
+                // Check collision at the proposed new position using relative coordinates (AABB check)
                 if (
                     newBallX < wallRelative.right && 
                     newBallX + ballWidth > wallRelative.left &&
                     newBallY < wallRelative.bottom &&
                     newBallY + ballHeight > wallRelative.top
                 ) {
-                    // Collision detected! Determine direction and adjust
+                    // Collision detected! Use Minimum Translation Vector (MTV) to resolve penetration.
                     
-                    // Check horizontal side collision
-                    if (ballX >= wallRelative.right || ballX + ballWidth <= wallRelative.left) {
+                    // 1. Calculate Overlap
+                    // Overlap is the penetration depth on each axis.
+                    const overlapX = Math.min(
+                        wallRelative.right - newBallX,          // Overlap from the right side
+                        (newBallX + ballWidth) - wallRelative.left // Overlap from the left side
+                    );
+                    
+                    const overlapY = Math.min(
+                        wallRelative.bottom - newBallY,         // Overlap from the bottom side
+                        (newBallY + ballHeight) - wallRelative.top // Overlap from the top side
+                    );
+
+                    // 2. Resolve on the axis with the LEAST overlap (MTV)
+                    // The smaller overlap means the ball needs less distance to be pushed out on that axis.
+                    if (overlapX < overlapY) {
+                        // Horizontal collision (resolve X)
                         velocityX *= CONFIG.BOUNCE_FACTOR;
-                        newBallX = ballX; // Prevent movement in X
-                    } 
-                    
-                    // Check vertical side collision
-                    if (ballY >= wallRelative.bottom || ballY + ballHeight <= wallRelative.top) {
+
+                        if (velocityX > 0) {
+                            // Hit the left side of the wall while moving right
+                            newBallX = wallRelative.left - ballWidth;
+                        } else {
+                            // Hit the right side of the wall while moving left
+                            newBallX = wallRelative.right;
+                        }
+                    } else {
+                        // Vertical collision (resolve Y)
                         velocityY *= CONFIG.BOUNCE_FACTOR;
-                        newBallY = ballY; // Prevent movement in Y
-                    } 
+
+                        if (velocityY > 0) {
+                            // Hit the top side of the wall while moving down
+                            newBallY = wallRelative.top - ballHeight;
+                        } else {
+                            // Hit the bottom side of the wall while moving up
+                            newBallY = wallRelative.bottom;
+                        }
+                    }
                 }
             }
 
