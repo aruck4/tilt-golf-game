@@ -407,30 +407,42 @@
             let newBallY = ballY + velocityY;
 
             // 3. Wall Collision Check (Internal Walls)
+            // Get current dimensions for collision
             const ballRect = ball.getBoundingClientRect();
             const ballWidth = ballRect.width;
             const ballHeight = ballRect.height;
 
+            // FIX: Get the game area's position in viewport coordinates once
+            const gameAreaRect = gameArea.getBoundingClientRect();
+
             for (const wall of walls) {
                 const wallRect = wall.getBoundingClientRect();
 
-                // Check collision at the proposed new position
+                // FIX: Calculate wall coordinates relative to the game area (matching ballX/ballY system)
+                const wallRelative = {
+                    left: wallRect.left - gameAreaRect.left,
+                    right: wallRect.right - gameAreaRect.left,
+                    top: wallRect.top - gameAreaRect.top,
+                    bottom: wallRect.bottom - gameAreaRect.top
+                };
+
+                // Check collision at the proposed new position using relative coordinates
                 if (
-                    newBallX < wallRect.right && 
-                    newBallX + ballWidth > wallRect.left &&
-                    newBallY < wallRect.bottom &&
-                    newBallY + ballHeight > wallRect.top
+                    newBallX < wallRelative.right && 
+                    newBallX + ballWidth > wallRelative.left &&
+                    newBallY < wallRelative.bottom &&
+                    newBallY + ballHeight > wallRelative.top
                 ) {
                     // Collision detected! Determine direction and adjust
                     
                     // Check horizontal side collision
-                    if (ballX >= wallRect.right || ballX + ballWidth <= wallRect.left) {
+                    if (ballX >= wallRelative.right || ballX + ballWidth <= wallRelative.left) {
                         velocityX *= CONFIG.BOUNCE_FACTOR;
                         newBallX = ballX; // Prevent movement in X
                     } 
                     
                     // Check vertical side collision
-                    if (ballY >= wallRect.bottom || ballY + ballHeight <= wallRect.top) {
+                    if (ballY >= wallRelative.bottom || ballY + ballHeight <= wallRelative.top) {
                         velocityY *= CONFIG.BOUNCE_FACTOR;
                         newBallY = ballY; // Prevent movement in Y
                     } 
@@ -525,8 +537,3 @@
     </script>
 </body>
 </html>
-
-
-
-
-
