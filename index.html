@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Tilt Golf Prototype - Final Assignment</title>
+    <title>Maze Runner - Tilt Control Prototype</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
         /* === GLOBAL STYLES & FULL-SCREEN MAP === */
@@ -9,11 +9,12 @@
             margin: 0;
             padding: 0;
             overflow: hidden;
-            background-color: #1a7a1f; /* Default Golf Green */
+            background-color: #6d4c41; /* Darker Wood Tone Background */
             color: white;
-            font-family: Arial, sans-serif;
+            font-family: 'Inter', sans-serif;
             width: 100%;
             height: 100%;
+            touch-action: none; /* Prevents default mobile swipe actions */
         }
 
         #game-container {
@@ -29,48 +30,48 @@
             width: 100%;
             height: 100%;
             position: absolute;
+            background-color: #8d6e63; /* Lighter Wood Tone Play Area */
             display: none; /* Hidden until game starts */
+            border: 15px solid #5d4037; /* Outer Maze Frame */
+            box-sizing: border-box;
         }
 
         /* === GAME ELEMENTS === */
         #ball {
             position: absolute;
-            width: 15px; /* Smaller ball */
+            width: 15px;
             height: 15px;
             border-radius: 50%;
-            background: #f0f0f0; /* White/Silver for golf ball */
+            background: linear-gradient(145deg, #f0f0f0, #a0a0a0); /* Shiny Metal Look */
             border: 1px solid #333;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
             z-index: 10;
         }
 
-        #hole {
+        /* Traps (Holes the ball falls into) */
+        .trap, #goal-hole {
             position: absolute;
             width: 30px;
             height: 30px;
             border-radius: 50%;
-            background: #000; /* Black hole */
-            border: 2px solid #fff;
+            background: #000; /* Black Hole */
+            border: 2px solid #333;
             z-index: 5;
-            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5); /* Look of depth */
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.9);
         }
-
-        .trap {
+        
+        #goal-hole {
+            background-color: #cc0000; /* Red End Goal */
+            border: 3px dashed #fff;
+        }
+        
+        /* Maze Walls */
+        .wall {
             position: absolute;
-            z-index: 5;
-        }
-
-        .water-trap {
-            background: #007bff; /* Blue water */
-            border: 3px solid #0056b3;
-            /* Example of irregular shape using border-radius */
-            border-radius: 70% 30% 45% 85% / 60% 40% 75% 25%; 
-        }
-
-        .sand-trap {
-            background: #f4d03f; /* Yellow/tan sand */
-            border: 2px solid #b7950b;
-            /* Example of irregular shape using border-radius */
-            border-radius: 30% 80% 60% 40% / 50% 60% 50% 50%;
+            background-color: #5d4037; /* Dark Wood Wall Color */
+            border-radius: 2px;
+            z-index: 8;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
         }
 
         /* === Menu/Overlay Styles === */
@@ -85,66 +86,55 @@
         }
         
         button {
-            padding: 10px 20px;
+            padding: 12px 24px;
             margin: 10px;
             font-size: 1.1em;
             cursor: pointer;
             background-color: #4CAF50;
             color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
+            transition: all 0.2s;
+            box-shadow: 0 4px #388e3c;
         }
 
-        /* === Water Boundary Visual Cue === */
-        #water-border-top, #water-border-bottom, #water-border-left, #water-border-right {
-            position: absolute;
-            background-color: rgba(0, 119, 190, 0.7); /* Light blue border */
-            z-index: 20;
+        button:active {
+            box-shadow: 0 1px #388e3c;
+            transform: translateY(3px);
         }
-        #water-border-top, #water-border-bottom {
-            width: 100%;
-            height: 10px;
-        }
-        #water-border-left, #water-border-right {
-            height: 100%;
-            width: 10px;
-        }
-        #water-border-top { top: 0; left: 0; }
-        #water-border-bottom { bottom: 0; left: 0; }
-        #water-border-left { top: 0; left: 0; }
-        #water-border-right { top: 0; right: 0; }
-        
     </style>
 </head>
 <body>
 
     <div id="game-container">
+        <!-- Map Selection Menu -->
         <div id="map-select">
-            <h1>Select a Course</h1>
+            <h1>Maze Runner</h1>
+            <p>Guide the metal ball to the RED hole!</p>
             <div id="map-buttons">
-                </div>
+                <!-- Buttons injected by JavaScript -->
+            </div>
         </div>
 
+        <!-- Start Menu (Hidden initially) -->
         <div id="start-menu" style="display: none;">
             <h1 id="course-title"></h1>
-            <p>Guide the ball to the hole by tilting your phone.</p>
-            <button onclick="startGame()">Start Course</button>
-            <button onclick="showMapSelect()">Change Course</button>
+            <p>Tilt your phone to begin.</p>
+            <button onclick="startGame()">Start Maze</button>
+            <button onclick="showMapSelect()">Change Maze</button>
         </div>
 
+        <!-- Game Area -->
         <div id="game-area">
-            <div id="water-border-top"></div>
-            <div id="water-border-bottom"></div>
-            <div id="water-border-left"></div>
-            <div id="water-border-right"></div>
-            
             <div id="ball"></div>
-            <div id="hole"></div>
-            </div>
+            <div id="goal-hole"></div>
+            <!-- Walls and traps dynamically inserted here -->
+        </div>
 
+        <!-- Game Over Message (Initially hidden) -->
         <div id="game-over" style="display: none;">
-            <h2 id="game-over-message">You Win!</h2>
-            <button onclick="showMapSelect()">Play Again</button>
+            <h2 id="game-over-message"></h2>
+            <button onclick="showMapSelect()">Try Another Maze</button>
         </div>
     </div>
 
@@ -152,32 +142,50 @@
         // === CONFIGURATION (Easily Tweakable Values) ===
         const CONFIG = {
             DEAD_ZONE_TILT_THRESHOLD: 5, // Degrees. Tilt must be greater than this to move the ball.
-            BASE_SPEED: 0.1, // Slower base speed for more control
-            FRICTION: 0.99, // *** INCREASED for more momentum ***
-            BOUNCE_FACTOR: -0.2
+            BASE_SPEED: 0.1,             // Slower base speed for more control
+            FRICTION: 0.99,              // High friction (keeps momentum rolling)
+            BOUNCE_FACTOR: -0.5,         // Medium bounce off walls
+            WALL_THICKNESS: 15           // Thickness of maze walls in pixels
         };
 
         // === MAP DATA ===
+        // Positions and dimensions are in PERCENTAGE (%) for responsiveness.
         const MAP_DATA = [
             {
                 id: 0,
-                name: "The Beginner's Tee",
-                startPos: { x: 50, y: 50 },
-                holePos: { x: 70, y: 80 }, // Percentage from top-left for responsiveness
+                name: "The Beginner's Box",
+                startPos: { x: 5, y: 5 },
+                goalPos: { x: 90, y: 90 },
                 traps: [
-                    { type: 'sand', x: 20, y: 20, w: 15, h: 15 }, // %
-                    { type: 'water', x: 50, y: 50, w: 25, h: 8 },  // %
+                    { x: 30, y: 30 },
+                    { x: 70, y: 30 },
+                    { x: 50, y: 65 },
+                ],
+                walls: [
+                    // Outer barriers are handled by gameArea borders, these are internal walls.
+                    // { type: 'vertical', x: 20, y: 0, h: 40 }, // Example: Vertical wall starting at 20% X, 0% Y, 40% height
+                    { type: 'horizontal', x: 20, y: 20, w: 40 },
+                    { type: 'vertical', x: 60, y: 20, h: 40 },
+                    { type: 'horizontal', x: 40, y: 60, w: 40 },
+                    { type: 'vertical', x: 40, y: 40, h: 20 },
                 ]
             },
             {
                 id: 1,
-                name: "The River Run",
+                name: "The S-Bend Challenge",
                 startPos: { x: 90, y: 10 },
-                holePos: { x: 10, y: 90 }, // %
+                goalPos: { x: 10, y: 90 },
                 traps: [
-                    { type: 'water', x: 15, y: 50, w: 70, h: 10 }, // Long water hazard
-                    { type: 'sand', x: 80, y: 40, w: 10, h: 10 },
-                    { type: 'sand', x: 5, y: 70, w: 15, h: 15 },
+                    { x: 50, y: 10 },
+                    { x: 25, y: 50 },
+                    { x: 75, y: 50 },
+                    { x: 50, y: 90 },
+                ],
+                walls: [
+                    { type: 'horizontal', x: 0, y: 30, w: 70 },
+                    { type: 'horizontal', x: 30, y: 70, w: 70 },
+                    { type: 'vertical', x: 30, y: 30, h: 40 },
+                    { type: 'vertical', x: 70, y: 30, h: 40 },
                 ]
             }
         ];
@@ -188,8 +196,8 @@
         let ballY = 0;
         let velocityX = 0;
         let velocityY = 0;
-        let currentSpeedFactor = 1; // Used for sand traps
         let gameActive = false;
+        let walls = []; // Stores the current wall DOM elements for collision
 
         // --- DOM Elements ---
         const ball = document.getElementById('ball');
@@ -197,21 +205,28 @@
         const startMenu = document.getElementById('start-menu');
         const gameOver = document.getElementById('game-over');
         const mapSelect = document.getElementById('map-select');
+        const goalHole = document.getElementById('goal-hole');
 
         // --- Initialization ---
         document.addEventListener('DOMContentLoaded', () => {
             initializeMapButtons();
+            // Initial check to ensure the goal hole exists, even if hidden
+            if (!goalHole) {
+                const newGoal = document.createElement('div');
+                newGoal.id = 'goal-hole';
+                gameArea.appendChild(newGoal);
+            }
         });
 
         function initializeMapButtons() {
             const container = document.getElementById('map-buttons');
+            container.innerHTML = ''; // Clear existing buttons
             MAP_DATA.forEach(map => {
                 const button = document.createElement('button');
                 button.textContent = map.name;
                 button.onclick = () => selectMap(map.id);
                 container.appendChild(button);
             });
-            showMapSelect();
         }
         
         function showMapSelect() {
@@ -227,7 +242,6 @@
             const map = MAP_DATA[mapId];
             document.getElementById('course-title').textContent = map.name;
             
-            // Show start menu for the selected map
             mapSelect.style.display = 'none';
             startMenu.style.display = 'block';
         }
@@ -242,9 +256,8 @@
             // Reset state
             velocityX = 0;
             velocityY = 0;
-            currentSpeedFactor = 1;
 
-            // Apply map layout
+            // Apply map layout and start game loop
             loadMap(map);
 
             gameActive = true;
@@ -256,7 +269,9 @@
                         if (permissionState === 'granted') {
                             window.addEventListener('devicemotion', handleMotion);
                         } else {
-                            alert("Motion access denied. Game cannot be played.");
+                            // Using a temporary modal/alert replacement for user feedback
+                            document.getElementById('game-over-message').textContent = "Motion access denied. Game cannot be played.";
+                            gameOver.style.display = 'block';
                         }
                     })
                     .catch(console.error);
@@ -268,40 +283,57 @@
         }
 
         function loadMap(map) {
-            // Clear old traps
-            document.querySelectorAll('#game-area .trap').forEach(trap => trap.remove());
+            // Clear old traps and walls
+            document.querySelectorAll('#game-area .trap, #game-area .wall').forEach(el => el.remove());
+            walls = [];
 
-            // Set ball initial position (from percentage to pixel)
-            ballX = (gameArea.clientWidth * map.startPos.x) / 100;
-            ballY = (gameArea.clientHeight * map.startPos.y) / 100;
+            // Helper to convert percentage to pixels
+            const toPxX = (pct) => (gameArea.clientWidth * pct) / 100;
+            const toPxY = (pct) => (gameArea.clientHeight * pct) / 100;
+            const centerOffset = (el) => el.clientWidth / 2;
 
-            // Set hole position
-            const hole = document.getElementById('hole');
-            hole.style.left = (gameArea.clientWidth * map.holePos.x) / 100 - (hole.clientWidth / 2) + 'px';
-            hole.style.top = (gameArea.clientHeight * map.holePos.y) / 100 - (hole.clientHeight / 2) + 'px';
+            // 1. Set ball initial position
+            ballX = toPxX(map.startPos.x);
+            ballY = toPxY(map.startPos.y);
 
-            // Add new traps
+            // 2. Set goal hole position
+            goalHole.style.left = toPxX(map.goalPos.x) - centerOffset(goalHole) + 'px';
+            goalHole.style.top = toPxY(map.goalPos.y) - centerOffset(goalHole) + 'px';
+
+            // 3. Add new traps (black holes)
             map.traps.forEach(t => {
                 const trapDiv = document.createElement('div');
-                trapDiv.className = `trap ${t.type}-trap`;
-                trapDiv.style.left = (gameArea.clientWidth * t.x) / 100 + 'px';
-                trapDiv.style.top = (gameArea.clientHeight * t.y) / 100 + 'px';
-                trapDiv.style.width = (gameArea.clientWidth * t.w) / 100 + 'px';
-                trapDiv.style.height = (gameArea.clientHeight * t.h) / 100 + 'px';
-                
-                // Add bounding box info for collision helper
-                trapDiv.dataset.x = trapDiv.offsetLeft;
-                trapDiv.dataset.y = trapDiv.offsetTop;
-                trapDiv.dataset.w = trapDiv.offsetWidth;
-                trapDiv.dataset.h = trapDiv.offsetHeight;
-                
+                trapDiv.className = `trap`;
+                trapDiv.style.left = toPxX(t.x) - centerOffset(trapDiv) + 'px';
+                trapDiv.style.top = toPxY(t.y) - centerOffset(trapDiv) + 'px';
                 gameArea.appendChild(trapDiv);
+            });
+
+            // 4. Add walls
+            map.walls.forEach(w => {
+                const wallDiv = document.createElement('div');
+                wallDiv.className = 'wall';
+                wallDiv.dataset.type = w.type;
+
+                if (w.type === 'horizontal') {
+                    wallDiv.style.left = toPxX(w.x) + 'px';
+                    wallDiv.style.top = toPxY(w.y) + 'px';
+                    wallDiv.style.width = toPxX(w.w) + 'px';
+                    wallDiv.style.height = CONFIG.WALL_THICKNESS + 'px';
+                } else if (w.type === 'vertical') {
+                    wallDiv.style.left = toPxX(w.x) + 'px';
+                    wallDiv.style.top = toPxY(w.y) + 'px';
+                    wallDiv.style.width = CONFIG.WALL_THICKNESS + 'px';
+                    wallDiv.style.height = toPxY(w.h) + 'px';
+                }
+                
+                gameArea.appendChild(wallDiv);
+                walls.push(wallDiv);
             });
             
             ball.style.left = ballX + 'px';
             ball.style.top = ballY + 'px';
         }
-
 
         // --- Sensor Handling ---
         function handleMotion(event) {
@@ -309,18 +341,18 @@
 
             const acceleration = event.accelerationIncludingGravity;
 
-            // Calculate a rough degree tilt (using atan2 is more accurate, but this is simple)
+            // Calculate a rough degree tilt for dead zone
             const degTiltX = Math.atan(acceleration.x / 9.8) * (180 / Math.PI);
             const degTiltY = Math.atan(acceleration.y / 9.8) * (180 / Math.PI);
 
-            // --- Apply Dead Zone ---
+            // --- Apply Dead Zone and Inversion ---
             if (Math.abs(degTiltX) > CONFIG.DEAD_ZONE_TILT_THRESHOLD) {
-                 // *** FIX 1: Added negative sign to reverse X-axis ***
-                 velocityX += -acceleration.x * CONFIG.BASE_SPEED * currentSpeedFactor; 
+                 // Invert X-axis for correct maze feel
+                 velocityX += -acceleration.x * CONFIG.BASE_SPEED; 
             }
             if (Math.abs(degTiltY) > CONFIG.DEAD_ZONE_TILT_THRESHOLD) {
-                // *** FIX 1: Removed negative sign to reverse Y-axis ***
-                velocityY += acceleration.y * CONFIG.BASE_SPEED * currentSpeedFactor; 
+                // Invert Y-axis for correct maze feel
+                velocityY += acceleration.y * CONFIG.BASE_SPEED; 
             }
         }
 
@@ -329,50 +361,75 @@
         function gameLoop() {
             if (!gameActive) return;
 
-            // 1. Apply Friction/Damping
+            // 1. Apply Friction/Damping (maintains momentum)
             velocityX *= CONFIG.FRICTION;
             velocityY *= CONFIG.FRICTION;
 
-            // 2. Update Position
-            ballX += velocityX;
-            ballY += velocityY;
+            // 2. Pre-update position
+            let newBallX = ballX + velocityX;
+            let newBallY = ballY + velocityY;
 
-            // 3. Check for Traps/Hole (Collision Detection)
+            // 3. Wall Collision Check (Internal Walls)
+            const ballRect = ball.getBoundingClientRect();
+            const ballWidth = ballRect.width;
+            const ballHeight = ballRect.height;
+
+            for (const wall of walls) {
+                const wallRect = wall.getBoundingClientRect();
+
+                // Check collision at the proposed new position
+                if (
+                    newBallX < wallRect.right && 
+                    newBallX + ballWidth > wallRect.left &&
+                    newBallY < wallRect.bottom &&
+                    newBallY + ballHeight > wallRect.top
+                ) {
+                    // Collision detected! Determine direction and adjust
+                    
+                    // Check horizontal side collision
+                    if (ballX >= wallRect.right || ballX + ballWidth <= wallRect.left) {
+                        velocityX *= CONFIG.BOUNCE_FACTOR;
+                        newBallX = ballX; // Prevent movement in X
+                    } 
+                    
+                    // Check vertical side collision
+                    if (ballY >= wallRect.bottom || ballY + ballHeight <= wallRect.top) {
+                        velocityY *= CONFIG.BOUNCE_FACTOR;
+                        newBallY = ballY; // Prevent movement in Y
+                    } 
+                }
+            }
+
+            // 4. Boundary Collision Check (Maze Frame)
+            const maxX = gameArea.clientWidth - ballWidth - CONFIG.WALL_THICKNESS;
+            const maxY = gameArea.clientHeight - ballHeight - CONFIG.WALL_THICKNESS;
+            const min = CONFIG.WALL_THICKNESS;
+
+
+            if (newBallX < min) {
+                newBallX = min;
+                velocityX *= CONFIG.BOUNCE_FACTOR;
+            } else if (newBallX > maxX) {
+                newBallX = maxX;
+                velocityX *= CONFIG.BOUNCE_FACTOR;
+            }
+
+            if (newBallY < min) {
+                newBallY = min;
+                velocityY *= CONFIG.BOUNCE_FACTOR;
+            } else if (newBallY > maxY) {
+                newBallY = maxY;
+                velocityY *= CONFIG.BOUNCE_FACTOR;
+            }
+
+            // 5. Update position after collision checks
+            ballX = newBallX;
+            ballY = newBallY;
+            
+            // 6. Check for Traps/Goal
             checkCollisions();
 
-            // 4. Handle Wall Collisions (Water Edges)
-            const maxX = gameArea.clientWidth - ball.clientWidth;
-            const maxY = gameArea.clientHeight - ball.clientHeight;
-
-            let hitWall = false;
-
-            if (ballX < 0) {
-                ballX = 0;
-                velocityX *= CONFIG.BOUNCE_FACTOR;
-                hitWall = true;
-            } else if (ballX > maxX) {
-                ballX = maxX;
-                velocityX *= CONFIG.BOUNCE_FACTOR;
-                hitWall = true;
-            }
-
-            if (ballY < 0) {
-                ballY = 0;
-                velocityY *= CONFIG.BOUNCE_FACTOR;
-                hitWall = true;
-            } else if (ballY > maxY) {
-                ballY = maxY;
-                velocityY *= CONFIG.BOUNCE_FACTOR;
-                hitWall = true;
-            }
-            
-            // If any wall is hit, it's a water hazard!
-            if (hitWall) {
-                gameOverScreen("Splash! Went out of bounds.");
-                return;
-            }
-
-            // 5. Update Ball Position on Screen
+            // 7. Update Ball Position on Screen
             ball.style.left = ballX + 'px';
             ball.style.top = ballY + 'px';
 
@@ -389,66 +446,46 @@
         // --- Collision Logic ---
         function checkCollisions() {
             const ballRect = ball.getBoundingClientRect();
-            const holeRect = document.getElementById('hole').getBoundingClientRect();
+            const goalRect = goalHole.getBoundingClientRect();
             const traps = document.querySelectorAll('.trap');
             
-            // Use client dimensions for more accurate collision checks (relative to viewport)
+            // Get ball center position relative to the viewport
             const ballCenter = { 
                 x: ballRect.left + ballRect.width / 2, 
                 y: ballRect.top + ballRect.height / 2 
             };
 
-
-            // ** HOLE COLLISION (Win Condition) **
+            // ** 1. GOAL HOLE COLLISION (Win Condition) **
             if (
-                ballCenter.x > holeRect.left &&
-                ballCenter.x < holeRect.right &&
-                ballCenter.y > holeRect.top &&
-                ballCenter.y < holeRect.bottom
+                ballCenter.x > goalRect.left &&
+                ballCenter.x < goalRect.right &&
+                ballCenter.y > goalRect.top &&
+                ballCenter.y < goalRect.bottom
             ) {
-                gameOverScreen("In the Hole! Course Complete!");
+                gameOverScreen("Success! You guided the ball to the RED hole!");
                 return;
             }
 
-            // ** TRAP COLLISION (Sand/Water) **
-            let inSandTrap = false;
-            
+            // ** 2. TRAP HOLE COLLISION (Loss Condition) **
             traps.forEach(trap => {
                 const trapRect = trap.getBoundingClientRect();
                 
-                // Simple Bounding Box Collision Check
+                // Check if the center of the ball has fallen into the black hole (trap)
                 if (
-                    ballRect.right > trapRect.left &&
-                    ballRect.left < trapRect.right &&
-                    ballRect.bottom > trapRect.top &&
-                    ballRect.top < trapRect.bottom
+                    ballCenter.x > trapRect.left &&
+                    ballCenter.x < trapRect.right &&
+                    ballCenter.y > trapRect.top &&
+                    ballCenter.y < trapRect.bottom
                 ) {
-                    // Check if ball is fully inside the trap's bounding box to be safer
-                    if (ballRect.left > trapRect.left && ballRect.right < trapRect.right) {
-                        if (trap.classList.contains('water-trap')) {
-                            // Water Trap: Reset/Fail
-                            gameOverScreen("Splash! Into the water hazard.");
-                            return;
-                        } else if (trap.classList.contains('sand-trap')) {
-                            // Sand Trap: Slow down the ball significantly
-                            inSandTrap = true;
-                        }
-                    }
+                    gameOverScreen("Oops! The ball fell into a trap hole!");
+                    return;
                 }
             });
-
-            // Apply Sand Trap physics if collision detected
-            if (inSandTrap) {
-                currentSpeedFactor = 0.2; // Slow down momentum gain
-                velocityX *= 0.8; // Apply immediate brake to existing velocity
-                velocityY *= 0.8;
-            } else {
-                currentSpeedFactor = 1; // Restore normal speed
-            }
         }
     </script>
 </body>
 </html>
+
 
 
 
