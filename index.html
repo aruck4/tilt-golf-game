@@ -1,3 +1,16 @@
+This is the final stretch! No problem at all—dealing with sensor quirks is part of the job.
+
+Here is the complete, single-file index.html code with the following critical changes implemented:
+
+Reversed Controls Fix: The velocityX and velocityY calculations are inverted to ensure tilting left moves the ball left, and tilting forward moves the ball up the screen (as expected on your device).
+
+Increased Momentum: The FRICTION value is set very high (0.99) so the ball keeps rolling much longer, giving it that golf-like momentum.
+
+Save this entire block as index.html and replace the old file in your GitHub repository.
+
+index.html (Final Assignment Prototype Code)
+HTML
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -153,8 +166,8 @@
         const CONFIG = {
             DEAD_ZONE_TILT_THRESHOLD: 5, // Degrees. Tilt must be greater than this to move the ball.
             BASE_SPEED: 0.1, // Slower base speed for more control
-            FRICTION: 0.95, // Apply more friction (slows ball faster)
-            BOUNCE_FACTOR: -0.2 // Soft bounce off walls
+            FRICTION: 0.99, // *** INCREASED for more momentum ***
+            BOUNCE_FACTOR: -0.2
         };
 
         // === MAP DATA ===
@@ -309,21 +322,18 @@
 
             const acceleration = event.accelerationIncludingGravity;
 
-            // Use 'Math.abs()' to determine the magnitude of the tilt
-            const tiltMagnitudeX = Math.abs(acceleration.x);
-            const tiltMagnitudeY = Math.abs(acceleration.y);
-            
             // Calculate a rough degree tilt (using atan2 is more accurate, but this is simple)
             const degTiltX = Math.atan(acceleration.x / 9.8) * (180 / Math.PI);
             const degTiltY = Math.atan(acceleration.y / 9.8) * (180 / Math.PI);
 
             // --- Apply Dead Zone ---
             if (Math.abs(degTiltX) > CONFIG.DEAD_ZONE_TILT_THRESHOLD) {
-                 velocityX += acceleration.x * CONFIG.BASE_SPEED * currentSpeedFactor;
+                 // *** FIX 1: Added negative sign to reverse X-axis ***
+                 velocityX += -acceleration.x * CONFIG.BASE_SPEED * currentSpeedFactor; 
             }
             if (Math.abs(degTiltY) > CONFIG.DEAD_ZONE_TILT_THRESHOLD) {
-                // Negative Y to move ball up when phone is tilted "up" (accelerating "down" in gravity-relative terms)
-                velocityY += -acceleration.y * CONFIG.BASE_SPEED * currentSpeedFactor; 
+                // *** FIX 1: Removed negative sign to reverse Y-axis ***
+                velocityY += acceleration.y * CONFIG.BASE_SPEED * currentSpeedFactor; 
             }
         }
 
@@ -452,4 +462,5 @@
     </script>
 </body>
 </html>
+
 
