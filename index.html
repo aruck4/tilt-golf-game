@@ -33,7 +33,7 @@
             position: absolute;
             background-color: #8d6e63; /* Lighter Wood Tone Play Area */
             display: none; /* Hidden until game starts */
-            border: 15px solid #5d4037; /* Outer Maze Frame */
+            border: 15px solid #5d4037; /* Outer Maze Frame (15px border) */
             box-sizing: border-box;
         }
 
@@ -148,6 +148,9 @@
             BOUNCE_FACTOR: -0.5,         // Medium bounce off walls
             WALL_THICKNESS: 0            // This is now calculated dynamically in loadMap for scaling
         };
+
+        // The outer border thickness, used for establishing the true boundary of the playing field.
+        const OUTER_BORDER_THICKNESS = 15; 
 
         // === MAP DATA ===
         // Positions and dimensions are in PERCENTAGE (%) for responsiveness.
@@ -319,7 +322,7 @@
             document.querySelectorAll('#game-area .trap, #game-area .wall').forEach(el => el.remove());
             walls = [];
 
-            // Helper to convert percentage to pixels
+            // Helper to convert percentage to pixels (relative to inner content area)
             const toPxX = (pct) => (gameArea.clientWidth * pct) / 100;
             const toPxY = (pct) => (gameArea.clientHeight * pct) / 100;
             const centerOffset = (el) => el.clientWidth / 2;
@@ -331,20 +334,23 @@
 
             // 1. Set ball initial position
             const ballWidth = ball.offsetWidth;
-            // FIX: Ensure ballX/Y represents the top-left corner, relative to the map center.
-            ballX = toPxX(map.startPos.x) - (ballWidth / 2);
-            ballY = toPxY(map.startPos.y) - (ballWidth / 2);
+            
+            // FIX: Add OUTER_BORDER_THICKNESS to ballX/Y so the position is relative to the game-area's top-left corner (not the inner content area).
+            ballX = toPxX(map.startPos.x) - (ballWidth / 2) + OUTER_BORDER_THICKNESS;
+            ballY = toPxY(map.startPos.y) - (ballWidth / 2) + OUTER_BORDER_THICKNESS;
 
             // 2. Set goal hole position
-            goalHole.style.left = toPxX(map.goalPos.x) - centerOffset(goalHole) + 'px';
-            goalHole.style.top = toPxY(map.goalPos.y) - centerOffset(goalHole) + 'px';
+            // FIX: Add OUTER_BORDER_THICKNESS to align with the new coordinate system
+            goalHole.style.left = toPxX(map.goalPos.x) - centerOffset(goalHole) + OUTER_BORDER_THICKNESS + 'px';
+            goalHole.style.top = toPxY(map.goalPos.y) - centerOffset(goalHole) + OUTER_BORDER_THICKNESS + 'px';
 
             // 3. Add new traps (black holes)
             map.traps.forEach(t => {
                 const trapDiv = document.createElement('div');
                 trapDiv.className = `trap`;
-                trapDiv.style.left = toPxX(t.x) - centerOffset(trapDiv) + 'px';
-                trapDiv.style.top = toPxY(t.y) - centerOffset(trapDiv) + 'px';
+                // FIX: Add OUTER_BORDER_THICKNESS to align with the new coordinate system
+                trapDiv.style.left = toPxX(t.x) - centerOffset(trapDiv) + OUTER_BORDER_THICKNESS + 'px';
+                trapDiv.style.top = toPxY(t.y) - centerOffset(trapDiv) + OUTER_BORDER_THICKNESS + 'px';
                 gameArea.appendChild(trapDiv);
             });
 
@@ -368,20 +374,25 @@
                     height = toPxY(w.h);
                 }
 
-                wallDiv.style.left = left + 'px';
-                wallDiv.style.top = top + 'px';
+                // FIX: Apply the border offset to the CSS position
+                const finalLeft = left + OUTER_BORDER_THICKNESS;
+                const finalTop = top + OUTER_BORDER_THICKNESS;
+
+                wallDiv.style.left = finalLeft + 'px';
+                wallDiv.style.top = finalTop + 'px';
                 wallDiv.style.width = width + 'px';
                 wallDiv.style.height = height + 'px';
                 
                 gameArea.appendChild(wallDiv);
                 
                 // Store calculated pixel values for collision (Source of Truth)
+                // These coordinates are relative to the top-left of the game-area box.
                 walls.push({
                     element: wallDiv,
-                    left: left,
-                    top: top,
-                    right: left + width,
-                    bottom: top + height
+                    left: finalLeft,
+                    top: finalTop,
+                    right: finalLeft + width,
+                    bottom: finalTop + height
                 });
             });
             
@@ -427,9 +438,8 @@
             const ballWidth = ball.offsetWidth;
             const ballHeight = ball.offsetHeight;
 
-            // We no longer rely on getBoundingClientRect() inside the game loop for walls.
+            // Collision check using the pre-calculated, pixel-perfect wall hitboxes
             for (const wallData of walls) {
-                // Use the precise pixel coordinates stored in loadMap
                 const wallRelative = {
                     left: wallData.left,
                     right: wallData.right,
@@ -447,7 +457,6 @@
                     // Collision detected! Use Minimum Translation Vector (MTV) to resolve penetration.
                     
                     // 1. Calculate Overlap
-                    // Overlap is the penetration depth on each axis.
                     const overlapX = Math.min(
                         wallRelative.right - newBallX,          // Overlap from the right side
                         (newBallX + ballWidth) - wallRelative.left // Overlap from the left side
@@ -461,32 +470,30 @@
                     // 2. Resolve on the axis with the LEAST overlap (MTV)
                     if (overlapX < overlapY) {
                         // Horizontal collision (resolve X)
-                        velocityX *= CONFIG.BOUNCE_FACTOR; // Apply bounce (flips sign)
+                        velocityX *= CONFIG.BOUNCE_FACTOR; 
 
-                        // Use center-based check for robust position correction
                         const ballCenterX = newBallX + ballWidth / 2;
                         const wallCenterX = (wallRelative.left + wallRelative.right) / 2;
 
                         if (ballCenterX < wallCenterX) {
-                            // Ball center is to the left of the wall center -> push left to the wall's left edge
+                            // Push ball to the left edge of the wall
                             newBallX = wallRelative.left - ballWidth;
                         } else {
-                            // Ball center is to the right of the wall center -> push right to the wall's right edge
+                            // Push ball to the right edge of the wall
                             newBallX = wallRelative.right;
                         }
                     } else {
                         // Vertical collision (resolve Y)
-                        velocityY *= CONFIG.BOUNCE_FACTOR; // Apply bounce (flips sign)
+                        velocityY *= CONFIG.BOUNCE_FACTOR; 
 
-                        // Use center-based check for robust position correction
                         const ballCenterY = newBallY + ballHeight / 2;
                         const wallCenterY = (wallRelative.top + wallRelative.bottom) / 2;
 
                         if (ballCenterY < wallCenterY) {
-                            // Ball center is above the wall center -> push up to the wall's top edge
+                            // Push ball up to the top edge of the wall
                             newBallY = wallRelative.top - ballHeight;
                         } else {
-                            // Ball center is below the wall center -> push down to the wall's bottom edge
+                            // Push ball down to the bottom edge of the wall
                             newBallY = wallRelative.bottom;
                         }
                     }
@@ -494,11 +501,14 @@
             }
 
             // 4. Boundary Collision Check (Maze Frame)
-            // The outer border is 15px.
-            const outerBoundaryThickness = 15;
-            const maxX = gameArea.clientWidth - ballWidth - outerBoundaryThickness;
-            const maxY = gameArea.clientHeight - ballHeight - outerBoundaryThickness;
-            const min = outerBoundaryThickness;
+            const innerContentWidth = gameArea.clientWidth;
+
+            // The minimum position (left/top) must be the border thickness itself (15px).
+            const min = OUTER_BORDER_THICKNESS;
+
+            // The maximum position (right/bottom) is the border (15px) + inner content width - ball width.
+            const maxX = innerContentWidth + OUTER_BORDER_THICKNESS - ballWidth;
+            const maxY = gameArea.clientHeight + OUTER_BORDER_THICKNESS - ballHeight;
 
 
             if (newBallX < min) {
@@ -570,6 +580,7 @@
                 const trapTop = parseFloat(trap.style.top);
                 const trapSize = trap.offsetWidth;
                 
+                // If the ball center falls within the trap's bounding box
                 if (
                     ballCenter.x > trapLeft &&
                     ballCenter.x < trapLeft + trapSize &&
