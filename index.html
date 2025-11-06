@@ -434,6 +434,7 @@
                     // Collision detected! Use Minimum Translation Vector (MTV) to resolve penetration.
                     
                     // 1. Calculate Overlap
+                    // Overlap is the penetration depth on each axis.
                     const overlapX = Math.min(
                         wallRelative.right - newBallX,          // Overlap from the right side
                         (newBallX + ballWidth) - wallRelative.left // Overlap from the left side
@@ -444,31 +445,35 @@
                         (newBallY + ballHeight) - wallRelative.top // Overlap from the top side
                     );
 
-                    // --- Store the direction of approach BEFORE applying the bounce factor ---
-                    const wasMovingRight = velocityX > 0;
-                    const wasMovingDown = velocityY > 0;
-
                     // 2. Resolve on the axis with the LEAST overlap (MTV)
                     if (overlapX < overlapY) {
                         // Horizontal collision (resolve X)
                         velocityX *= CONFIG.BOUNCE_FACTOR; // Apply bounce (flips sign)
 
-                        if (wasMovingRight) {
-                            // Was moving right, hit left side of wall -> push left to the edge
+                        // FIX: Use center-based check for robust position correction (instead of potentially flipped velocity sign)
+                        const ballCenterX = newBallX + ballWidth / 2;
+                        const wallCenterX = (wallRelative.left + wallRelative.right) / 2;
+
+                        if (ballCenterX < wallCenterX) {
+                            // Ball center is to the left of the wall center -> push left to the wall's left edge
                             newBallX = wallRelative.left - ballWidth;
                         } else {
-                            // Was moving left, hit right side of wall -> push right to the edge
+                            // Ball center is to the right of the wall center -> push right to the wall's right edge
                             newBallX = wallRelative.right;
                         }
                     } else {
                         // Vertical collision (resolve Y)
                         velocityY *= CONFIG.BOUNCE_FACTOR; // Apply bounce (flips sign)
 
-                        if (wasMovingDown) {
-                            // Was moving down, hit top side of wall -> push up to the edge
+                        // FIX: Use center-based check for robust position correction
+                        const ballCenterY = newBallY + ballHeight / 2;
+                        const wallCenterY = (wallRelative.top + wallRelative.bottom) / 2;
+
+                        if (ballCenterY < wallCenterY) {
+                            // Ball center is above the wall center -> push up to the wall's top edge
                             newBallY = wallRelative.top - ballHeight;
                         } else {
-                            // Was moving up, hit bottom side of wall -> push down to the edge
+                            // Ball center is below the wall center -> push down to the wall's bottom edge
                             newBallY = wallRelative.bottom;
                         }
                     }
