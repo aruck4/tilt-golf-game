@@ -229,7 +229,7 @@
         let velocityX = 0;
         let velocityY = 0;
         let gameActive = false;
-        let walls = []; // Stores the current wall DOM elements for collision
+        let walls = []; // Stores the current wall hitbox data (not just the elements)
 
         // --- DOM Elements ---
         const ball = document.getElementById('ball');
@@ -353,21 +353,36 @@
                 const wallDiv = document.createElement('div');
                 wallDiv.className = 'wall';
                 wallDiv.dataset.type = w.type;
+                
+                let left, top, width, height;
 
                 if (w.type === 'horizontal') {
-                    wallDiv.style.left = toPxX(w.x) + 'px';
-                    wallDiv.style.top = toPxY(w.y) + 'px';
-                    wallDiv.style.width = toPxX(w.w) + 'px';
-                    wallDiv.style.height = CONFIG.WALL_THICKNESS + 'px';
+                    left = toPxX(w.x);
+                    top = toPxY(w.y);
+                    width = toPxX(w.w);
+                    height = CONFIG.WALL_THICKNESS;
                 } else if (w.type === 'vertical') {
-                    wallDiv.style.left = toPxX(w.x) + 'px';
-                    wallDiv.style.top = toPxY(w.y) + 'px';
-                    wallDiv.style.width = CONFIG.WALL_THICKNESS + 'px';
-                    wallDiv.style.height = toPxY(w.h) + 'px';
+                    left = toPxX(w.x);
+                    top = toPxY(w.y);
+                    width = CONFIG.WALL_THICKNESS;
+                    height = toPxY(w.h);
                 }
+
+                wallDiv.style.left = left + 'px';
+                wallDiv.style.top = top + 'px';
+                wallDiv.style.width = width + 'px';
+                wallDiv.style.height = height + 'px';
                 
                 gameArea.appendChild(wallDiv);
-                walls.push(wallDiv);
+                
+                // Store calculated pixel values for collision (Source of Truth)
+                walls.push({
+                    element: wallDiv,
+                    left: left,
+                    top: top,
+                    right: left + width,
+                    bottom: top + height
+                });
             });
             
             ball.style.left = ballX + 'px';
@@ -412,18 +427,14 @@
             const ballWidth = ball.offsetWidth;
             const ballHeight = ball.offsetHeight;
 
-            // Get the game area's position in viewport coordinates once
-            const gameAreaRect = gameArea.getBoundingClientRect();
-
-            for (const wall of walls) {
-                const wallRect = wall.getBoundingClientRect();
-
-                // Calculate wall coordinates relative to the game area (matching ballX/ballY system)
+            // We no longer rely on getBoundingClientRect() inside the game loop for walls.
+            for (const wallData of walls) {
+                // Use the precise pixel coordinates stored in loadMap
                 const wallRelative = {
-                    left: wallRect.left - gameAreaRect.left,
-                    right: wallRect.right - gameAreaRect.left,
-                    top: wallRect.top - gameAreaRect.top,
-                    bottom: wallRect.bottom - gameAreaRect.top
+                    left: wallData.left,
+                    right: wallData.right,
+                    top: wallData.top,
+                    bottom: wallData.bottom
                 };
 
                 // Check collision at the proposed new position (AABB check)
@@ -529,7 +540,7 @@
 
         // --- Collision Logic ---
         function checkCollisions() {
-            // FIX: Use internal game area coordinates (ballX, ballY) for all collision checks.
+            // Use internal game area coordinates (ballX, ballY) for all collision checks.
             const ballSize = ball.offsetWidth;
             const ballCenter = { 
                 x: ballX + ballSize / 2, 
