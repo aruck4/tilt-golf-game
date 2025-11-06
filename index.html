@@ -407,18 +407,16 @@
             let newBallY = ballY + velocityY;
 
             // 3. Wall Collision Check (Internal Walls)
-            // Get current dimensions for collision
-            const ballRect = ball.getBoundingClientRect();
-            const ballWidth = ballRect.width;
-            const ballHeight = ballRect.height;
+            const ballWidth = ball.offsetWidth;
+            const ballHeight = ball.offsetHeight;
 
-            // FIX: Get the game area's position in viewport coordinates once
+            // Get the game area's position in viewport coordinates once
             const gameAreaRect = gameArea.getBoundingClientRect();
 
             for (const wall of walls) {
                 const wallRect = wall.getBoundingClientRect();
 
-                // FIX: Calculate wall coordinates relative to the game area (matching ballX/ballY system)
+                // Calculate wall coordinates relative to the game area (matching ballX/ballY system)
                 const wallRelative = {
                     left: wallRect.left - gameAreaRect.left,
                     right: wallRect.right - gameAreaRect.left,
@@ -426,7 +424,7 @@
                     bottom: wallRect.bottom - gameAreaRect.top
                 };
 
-                // Check collision at the proposed new position using relative coordinates (AABB check)
+                // Check collision at the proposed new position (AABB check)
                 if (
                     newBallX < wallRelative.right && 
                     newBallX + ballWidth > wallRelative.left &&
@@ -436,7 +434,6 @@
                     // Collision detected! Use Minimum Translation Vector (MTV) to resolve penetration.
                     
                     // 1. Calculate Overlap
-                    // Overlap is the penetration depth on each axis.
                     const overlapX = Math.min(
                         wallRelative.right - newBallX,          // Overlap from the right side
                         (newBallX + ballWidth) - wallRelative.left // Overlap from the left side
@@ -447,28 +444,31 @@
                         (newBallY + ballHeight) - wallRelative.top // Overlap from the top side
                     );
 
+                    // --- Store the direction of approach BEFORE applying the bounce factor ---
+                    const wasMovingRight = velocityX > 0;
+                    const wasMovingDown = velocityY > 0;
+
                     // 2. Resolve on the axis with the LEAST overlap (MTV)
-                    // The smaller overlap means the ball needs less distance to be pushed out on that axis.
                     if (overlapX < overlapY) {
                         // Horizontal collision (resolve X)
-                        velocityX *= CONFIG.BOUNCE_FACTOR;
+                        velocityX *= CONFIG.BOUNCE_FACTOR; // Apply bounce (flips sign)
 
-                        if (velocityX > 0) {
-                            // Hit the left side of the wall while moving right
+                        if (wasMovingRight) {
+                            // Was moving right, hit left side of wall -> push left to the edge
                             newBallX = wallRelative.left - ballWidth;
                         } else {
-                            // Hit the right side of the wall while moving left
+                            // Was moving left, hit right side of wall -> push right to the edge
                             newBallX = wallRelative.right;
                         }
                     } else {
                         // Vertical collision (resolve Y)
-                        velocityY *= CONFIG.BOUNCE_FACTOR;
+                        velocityY *= CONFIG.BOUNCE_FACTOR; // Apply bounce (flips sign)
 
-                        if (velocityY > 0) {
-                            // Hit the top side of the wall while moving down
+                        if (wasMovingDown) {
+                            // Was moving down, hit top side of wall -> push up to the edge
                             newBallY = wallRelative.top - ballHeight;
                         } else {
-                            // Hit the bottom side of the wall while moving up
+                            // Was moving up, hit bottom side of wall -> push down to the edge
                             newBallY = wallRelative.bottom;
                         }
                     }
@@ -476,8 +476,7 @@
             }
 
             // 4. Boundary Collision Check (Maze Frame)
-            // The outer border is 15px. We use the dynamically calculated WALL_THICKNESS for internal wall rendering, 
-            // but rely on the hardcoded 15px border for the game area boundary check (which is consistent across screens).
+            // The outer border is 15px.
             const outerBoundaryThickness = 15;
             const maxX = gameArea.clientWidth - ballWidth - outerBoundaryThickness;
             const maxY = gameArea.clientHeight - ballHeight - outerBoundaryThickness;
