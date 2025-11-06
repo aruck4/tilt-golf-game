@@ -108,26 +108,26 @@
 <body>
 
     <div id="game-container">
-        <!-- Map Selection Menu --><div id="map-select">
+        <div id="map-select">
             <h1>Maze Runner</h1>
             <p>Guide the metal ball to the RED hole!</p>
             <div id="map-buttons">
-                <!-- Buttons injected by JavaScript --></div>
+                </div>
         </div>
 
-        <!-- Start Menu (Hidden initially) --><div id="start-menu" style="display: none;">
+        <div id="start-menu" style="display: none;">
             <h1 id="course-title"></h1>
             <p>Tilt your phone to begin.</p>
             <button onclick="startGame()">Start Maze</button>
             <button onclick="showMapSelect()">Change Maze</button>
         </div>
 
-        <!-- Game Area --><div id="game-area">
+        <div id="game-area">
             <div id="ball"></div>
             <div id="goal-hole"></div>
-            <!-- Walls and traps dynamically inserted here --></div>
+            </div>
 
-        <!-- Game Over Message (Initially hidden) --><div id="game-over" style="display: none;">
+        <div id="game-over" style="display: none;">
             <h2 id="game-over-message"></h2>
             <button onclick="showMapSelect()">Try Another Maze</button>
         </div>
@@ -137,8 +137,8 @@
         // === CONFIGURATION (Easily Tweakable Values) ===
         const CONFIG = {
             DEAD_ZONE_TILT_THRESHOLD: 5, // Degrees. Tilt must be greater than this to move the ball.
-            BASE_SPEED: 0.07,            // *** ADJUSTED: Slower base speed for lower sensitivity ***
-            FRICTION: 0.98,              // *** ADJUSTED: Slightly more friction for lower momentum ***
+            BASE_SPEED: 0.07,            // *** Sensitivity: Slower base speed for lower sensitivity ***
+            FRICTION: 0.98,              // *** Momentum: Slightly more friction for lower momentum ***
             BOUNCE_FACTOR: -0.5,         // Medium bounce off walls
             WALL_THICKNESS: 0            // This is now calculated dynamically in loadMap for scaling
         };
@@ -148,7 +148,6 @@
 
         // === MAP DATA ===
         // Positions and dimensions are in PERCENTAGE (%) for responsiveness.
-        // Designs based on the Labyrinth style (many holes, short wall segments).
         const MAP_DATA = [
             {
                 id: 0,
@@ -208,13 +207,12 @@
                     { type: 'vertical', x: 55, y: 40, h: 30 },  // Central divider peg 1 (Y=40 to Y=70)
 
                     // --- Bottom Block and Final Corner (Y=70-100) ---
-                    { type: 'horizontal', x: 20, y: 70, w: 60 }, // Main horizontal divider (Forces ball into X>80)
-                    // REMOVED: { type: 'vertical', x: 20, y: 70, h: 25 },  // Left side guide (Y=70 to Y=95) - This was blocking the path.
+                    // *** FIX: Changed X=20 to X=30 to open the bottom-left path (X < 30) ***
+                    { type: 'horizontal', x: 30, y: 70, w: 50 }, // Main horizontal divider (Runs X=30 to X=80, opening the path for X < 30)
                     
-                    // FIX: New, shorter pegs to define the open goal path at (95, 95)
+                    // Path to goal at (95, 95) is in the bottom-right corner
                     { type: 'vertical', x: 80, y: 70, h: 15 },  // Peg 1: Forces ball down to Y=85
                     { type: 'horizontal', x: 80, y: 85, w: 10 } // Peg 2: Forces ball right past X=90
-                    // The path is now clear to the goal at (95, 95)
                 ]
             }
         ];
@@ -329,12 +327,11 @@
             // 1. Set ball initial position
             const ballWidth = ball.offsetWidth;
             
-            // FIX: Add OUTER_BORDER_THICKNESS to ballX/Y so the position is relative to the game-area's top-left corner (not the inner content area).
+            // Position relative to the game-area's top-left corner (0,0)
             ballX = toPxX(map.startPos.x) - (ballWidth / 2) + OUTER_BORDER_THICKNESS;
             ballY = toPxY(map.startPos.y) - (ballWidth / 2) + OUTER_BORDER_THICKNESS;
 
             // 2. Set goal hole position
-            // FIX: Add OUTER_BORDER_THICKNESS to align with the new coordinate system
             goalHole.style.left = toPxX(map.goalPos.x) - centerOffset(goalHole) + OUTER_BORDER_THICKNESS + 'px';
             goalHole.style.top = toPxY(map.goalPos.y) - centerOffset(goalHole) + OUTER_BORDER_THICKNESS + 'px';
 
@@ -342,7 +339,6 @@
             map.traps.forEach(t => {
                 const trapDiv = document.createElement('div');
                 trapDiv.className = `trap`;
-                // FIX: Add OUTER_BORDER_THICKNESS to align with the new coordinate system
                 trapDiv.style.left = toPxX(t.x) - centerOffset(trapDiv) + OUTER_BORDER_THICKNESS + 'px';
                 trapDiv.style.top = toPxY(t.y) - centerOffset(trapDiv) + OUTER_BORDER_THICKNESS + 'px';
                 gameArea.appendChild(trapDiv);
@@ -368,7 +364,7 @@
                     height = toPxY(w.h);
                 }
 
-                // FIX: Apply the border offset to the CSS position
+                // Apply the border offset to the CSS position
                 const finalLeft = left + OUTER_BORDER_THICKNESS;
                 const finalTop = top + OUTER_BORDER_THICKNESS;
 
@@ -380,7 +376,6 @@
                 gameArea.appendChild(wallDiv);
                 
                 // Store calculated pixel values for collision (Source of Truth)
-                // These coordinates are relative to the top-left of the game-area box.
                 walls.push({
                     element: wallDiv,
                     left: finalLeft,
@@ -496,8 +491,6 @@
 
             // 4. Boundary Collision Check (Maze Frame)
             // The boundaries are from the gameArea's top-left (0,0) to its clientWidth/Height.
-            // The ball's top-left corner must always be >= OUTER_BORDER_THICKNESS and 
-            // <= (gameArea.clientWidth + OUTER_BORDER_THICKNESS - ballWidth)
             const minX = OUTER_BORDER_THICKNESS;
             const minY = OUTER_BORDER_THICKNESS;
             const maxX = gameArea.clientWidth + OUTER_BORDER_THICKNESS - ballWidth;
@@ -543,7 +536,7 @@
 
         // --- Collision Logic ---
         function checkCollisions() {
-            // All coordinates here (ballX, ballY, trapLeft, goalTop, etc.) are relative to the top-left of the gameArea.
+            // All coordinates here are relative to the top-left of the gameArea.
             const ballSize = ball.offsetWidth;
             const ballCenter = { 
                 x: ballX + ballSize / 2, 
@@ -555,7 +548,6 @@
             const goalSize = goalHole.offsetWidth;
             
             // ** 1. GOAL HOLE COLLISION (Win Condition) **
-            // Check if the ball center is within the goal's bounding box
             if (
                 ballCenter.x > goalLeft &&
                 ballCenter.x < goalLeft + goalSize &&
