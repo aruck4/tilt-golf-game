@@ -330,8 +330,10 @@
 
 
             // 1. Set ball initial position
-            ballX = toPxX(map.startPos.x);
-            ballY = toPxY(map.startPos.y);
+            const ballWidth = ball.offsetWidth;
+            // FIX: Ensure ballX/Y represents the top-left corner, relative to the map center.
+            ballX = toPxX(map.startPos.x) - (ballWidth / 2);
+            ballY = toPxY(map.startPos.y) - (ballWidth / 2);
 
             // 2. Set goal hole position
             goalHole.style.left = toPxX(map.goalPos.x) - centerOffset(goalHole) + 'px';
@@ -450,7 +452,7 @@
                         // Horizontal collision (resolve X)
                         velocityX *= CONFIG.BOUNCE_FACTOR; // Apply bounce (flips sign)
 
-                        // FIX: Use center-based check for robust position correction (instead of potentially flipped velocity sign)
+                        // Use center-based check for robust position correction
                         const ballCenterX = newBallX + ballWidth / 2;
                         const wallCenterX = (wallRelative.left + wallRelative.right) / 2;
 
@@ -465,7 +467,7 @@
                         // Vertical collision (resolve Y)
                         velocityY *= CONFIG.BOUNCE_FACTOR; // Apply bounce (flips sign)
 
-                        // FIX: Use center-based check for robust position correction
+                        // Use center-based check for robust position correction
                         const ballCenterY = newBallY + ballHeight / 2;
                         const wallCenterY = (wallRelative.top + wallRelative.bottom) / 2;
 
@@ -527,42 +529,46 @@
 
         // --- Collision Logic ---
         function checkCollisions() {
-            const ballRect = ball.getBoundingClientRect();
-            const goalRect = goalHole.getBoundingClientRect();
-            const traps = document.querySelectorAll('.trap');
-            
-            // Get ball center position relative to the viewport
+            // FIX: Use internal game area coordinates (ballX, ballY) for all collision checks.
+            const ballSize = ball.offsetWidth;
             const ballCenter = { 
-                x: ballRect.left + ballRect.width / 2, 
-                y: ballRect.top + ballRect.height / 2 
+                x: ballX + ballSize / 2, 
+                y: ballY + ballSize / 2 
             };
 
+            const goalLeft = parseFloat(goalHole.style.left);
+            const goalTop = parseFloat(goalHole.style.top);
+            const goalSize = goalHole.offsetWidth;
+            
             // ** 1. GOAL HOLE COLLISION (Win Condition) **
+            // Check if the ball center is within the goal's bounding box
             if (
-                ballCenter.x > goalRect.left &&
-                ballCenter.x < goalRect.right &&
-                ballCenter.y > goalRect.top &&
-                ballCenter.y < goalRect.bottom
+                ballCenter.x > goalLeft &&
+                ballCenter.x < goalLeft + goalSize &&
+                ballCenter.y > goalTop &&
+                ballCenter.y < goalTop + goalSize
             ) {
                 gameOverScreen("Success! You guided the ball to the RED hole!");
                 return;
             }
 
             // ** 2. TRAP HOLE COLLISION (Loss Condition) **
-            traps.forEach(trap => {
-                const trapRect = trap.getBoundingClientRect();
+            const traps = document.querySelectorAll('.trap');
+            for (const trap of traps) {
+                const trapLeft = parseFloat(trap.style.left);
+                const trapTop = parseFloat(trap.style.top);
+                const trapSize = trap.offsetWidth;
                 
-                // Check if the center of the ball has fallen into the black hole (trap)
                 if (
-                    ballCenter.x > trapRect.left &&
-                    ballCenter.x < trapRect.right &&
-                    ballCenter.y > trapRect.top &&
-                    ballCenter.y < trapRect.bottom
+                    ballCenter.x > trapLeft &&
+                    ballCenter.x < trapLeft + trapSize &&
+                    ballCenter.y > trapTop &&
+                    ballCenter.y < trapTop + trapSize
                 ) {
                     gameOverScreen("Oops! The ball fell into a trap hole!");
                     return;
                 }
-            });
+            }
         }
     </script>
 </body>
