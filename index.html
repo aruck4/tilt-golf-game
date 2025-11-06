@@ -49,7 +49,7 @@
             z-index: 10;
         }
 
-        /* Traps (Holes the ball falls into) - Increased size to 45px to match image density */
+        /* Traps (Holes the ball falls into) */
         .trap, #goal-hole {
             position: absolute;
             width: 45px;
@@ -134,12 +134,12 @@
     </div>
 
     <script>
-        // === CONFIGURATION (Easily Tweakable Values) ===
+        // === CONFIGURATION ===
         const CONFIG = {
             DEAD_ZONE_TILT_THRESHOLD: 5, // Degrees. Tilt must be greater than this to move the ball.
             BASE_SPEED: 0.07,            // *** Sensitivity: Slower base speed for lower sensitivity ***
             FRICTION: 0.98,              // *** Momentum: Slightly more friction for lower momentum ***
-            BOUNCE_FACTOR: -0.5,         // Medium bounce off walls
+            BOUNCE_FACTOR: -0.5,         // bounce off walls
             WALL_THICKNESS: 0            // This is now calculated dynamically in loadMap for scaling
         };
 
@@ -162,23 +162,23 @@
                     { x: 50, y: 50 } // Center Trap
                 ],
                 walls: [
-                    // Top Entry Guide (V: vertical, H: horizontal)
+              
                     { type: 'vertical', x: 30, y: 0, h: 20 },
                     { type: 'vertical', x: 70, y: 0, h: 20 },
                     
-                    // Left Serpent Curve
+                    
                     { type: 'horizontal', x: 20, y: 30, w: 30 }, // Block top-left
                     { type: 'vertical', x: 20, y: 30, h: 20 },
                     { type: 'horizontal', x: 20, y: 50, w: 30 }, // Block middle-left
                     { type: 'vertical', x: 40, y: 60, h: 20 },
 
-                    // Right Serpent Curve
+                 
                     { type: 'horizontal', x: 50, y: 70, w: 30 }, // Block bottom-right
                     { type: 'vertical', x: 80, y: 50, h: 20 },
                     { type: 'horizontal', x: 50, y: 30, w: 30 }, // Block middle-right
                     { type: 'vertical', x: 60, y: 20, h: 20 },
 
-                    // Bottom Guide
+        
                     { type: 'horizontal', x: 30, y: 85, w: 40 } // Funnel to the goal
                 ]
             },
@@ -198,21 +198,20 @@
                 ],
                 walls: [
                     // --- Top Left Quadrant (Start 5, 5) ---
-                    { type: 'horizontal', x: 20, y: 20, w: 30 }, // Blocks straight across from start
-                    { type: 'vertical', x: 45, y: 20, h: 25 },  // Forces ball down
+                    { type: 'horizontal', x: 20, y: 20, w: 30 },
+                    { type: 'vertical', x: 45, y: 20, h: 25 },  
 
-                    // --- Left-to-Right Crossover Channel (Y=45-70) ---
-                    { type: 'horizontal', x: 0, y: 40, w: 45 }, // Top block of channel (Y=40)
-                    { type: 'horizontal', x: 55, y: 40, w: 45 }, // Top block, forces entry near center (Y=40)
-                    { type: 'vertical', x: 55, y: 40, h: 30 },  // Central divider peg 1 (Y=40 to Y=70)
+             
+                    { type: 'horizontal', x: 0, y: 40, w: 45 }, 
+                    { type: 'horizontal', x: 55, y: 40, w: 45 },
+                    { type: 'vertical', x: 55, y: 40, h: 30 }, 
 
-                    // --- Bottom Block and Final Corner (Y=70-100) ---
-                    // *** FIX: Changed X=20 to X=30 to open the bottom-left path (X < 30) ***
-                    { type: 'horizontal', x: 30, y: 70, w: 50 }, // Main horizontal divider (Runs X=30 to X=80, opening the path for X < 30)
+                
+                    { type: 'horizontal', x: 30, y: 70, w: 50 },
                     
-                    // Path to goal at (95, 95) is in the bottom-right corner
-                    { type: 'vertical', x: 80, y: 70, h: 15 },  // Peg 1: Forces ball down to Y=85
-                    { type: 'horizontal', x: 80, y: 85, w: 10 } // Peg 2: Forces ball right past X=90
+                   
+                    { type: 'vertical', x: 80, y: 70, h: 15 },
+                    { type: 'horizontal', x: 80, y: 85, w: 10 }
                 ]
             }
         ];
@@ -319,7 +318,6 @@
             const toPxY = (pct) => (gameArea.clientHeight * pct) / 100;
             const centerOffset = (el) => el.clientWidth / 2;
 
-            // ** SCALING FIX: Calculate dynamic wall thickness based on 1.5% of game area **
             const dynamicWallThickness = Math.floor(gameArea.clientWidth * 0.015); 
             CONFIG.WALL_THICKNESS = dynamicWallThickness;
 
@@ -443,7 +441,6 @@
                     newBallY < wallRelative.bottom &&
                     newBallY + ballHeight > wallRelative.top
                 ) {
-                    // Collision detected! Use Minimum Translation Vector (MTV) to resolve penetration.
                     
                     // 1. Calculate Overlap
                     const overlapX = Math.min(
@@ -490,7 +487,6 @@
             }
 
             // 4. Boundary Collision Check (Maze Frame)
-            // The boundaries are from the gameArea's top-left (0,0) to its clientWidth/Height.
             const minX = OUTER_BORDER_THICKNESS;
             const minY = OUTER_BORDER_THICKNESS;
             const maxX = gameArea.clientWidth + OUTER_BORDER_THICKNESS - ballWidth;
@@ -580,3 +576,4 @@
     </script>
 </body>
 </html>
+
