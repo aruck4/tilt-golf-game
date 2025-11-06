@@ -108,32 +108,26 @@
 <body>
 
     <div id="game-container">
-        <!-- Map Selection Menu -->
-        <div id="map-select">
+        <!-- Map Selection Menu --><div id="map-select">
             <h1>Maze Runner</h1>
             <p>Guide the metal ball to the RED hole!</p>
             <div id="map-buttons">
-                <!-- Buttons injected by JavaScript -->
-            </div>
+                <!-- Buttons injected by JavaScript --></div>
         </div>
 
-        <!-- Start Menu (Hidden initially) -->
-        <div id="start-menu" style="display: none;">
+        <!-- Start Menu (Hidden initially) --><div id="start-menu" style="display: none;">
             <h1 id="course-title"></h1>
             <p>Tilt your phone to begin.</p>
             <button onclick="startGame()">Start Maze</button>
             <button onclick="showMapSelect()">Change Maze</button>
         </div>
 
-        <!-- Game Area -->
-        <div id="game-area">
+        <!-- Game Area --><div id="game-area">
             <div id="ball"></div>
             <div id="goal-hole"></div>
-            <!-- Walls and traps dynamically inserted here -->
-        </div>
+            <!-- Walls and traps dynamically inserted here --></div>
 
-        <!-- Game Over Message (Initially hidden) -->
-        <div id="game-over" style="display: none;">
+        <!-- Game Over Message (Initially hidden) --><div id="game-over" style="display: none;">
             <h2 id="game-over-message"></h2>
             <button onclick="showMapSelect()">Try Another Maze</button>
         </div>
@@ -143,8 +137,8 @@
         // === CONFIGURATION (Easily Tweakable Values) ===
         const CONFIG = {
             DEAD_ZONE_TILT_THRESHOLD: 5, // Degrees. Tilt must be greater than this to move the ball.
-            BASE_SPEED: 0.1,             // Slower base speed for more control
-            FRICTION: 0.99,              // High friction (keeps momentum rolling)
+            BASE_SPEED: 0.07,            // *** ADJUSTED: Slower base speed for lower sensitivity ***
+            FRICTION: 0.98,              // *** ADJUSTED: Slightly more friction for lower momentum ***
             BOUNCE_FACTOR: -0.5,         // Medium bounce off walls
             WALL_THICKNESS: 0            // This is now calculated dynamically in loadMap for scaling
         };
@@ -215,7 +209,7 @@
 
                     // --- Bottom Block and Final Corner (Y=70-100) ---
                     { type: 'horizontal', x: 20, y: 70, w: 60 }, // Main horizontal divider (Forces ball into X>80)
-                    { type: 'vertical', x: 20, y: 70, h: 25 },  // Left side guide (Y=70 to Y=95)
+                    // REMOVED: { type: 'vertical', x: 20, y: 70, h: 25 },  // Left side guide (Y=70 to Y=95) - This was blocking the path.
                     
                     // FIX: New, shorter pegs to define the open goal path at (95, 95)
                     { type: 'vertical', x: 80, y: 70, h: 15 },  // Peg 1: Forces ball down to Y=85
@@ -501,26 +495,25 @@
             }
 
             // 4. Boundary Collision Check (Maze Frame)
-            const innerContentWidth = gameArea.clientWidth;
-
-            // The minimum position (left/top) must be the border thickness itself (15px).
-            const min = OUTER_BORDER_THICKNESS;
-
-            // The maximum position (right/bottom) is the border (15px) + inner content width - ball width.
-            const maxX = innerContentWidth + OUTER_BORDER_THICKNESS - ballWidth;
+            // The boundaries are from the gameArea's top-left (0,0) to its clientWidth/Height.
+            // The ball's top-left corner must always be >= OUTER_BORDER_THICKNESS and 
+            // <= (gameArea.clientWidth + OUTER_BORDER_THICKNESS - ballWidth)
+            const minX = OUTER_BORDER_THICKNESS;
+            const minY = OUTER_BORDER_THICKNESS;
+            const maxX = gameArea.clientWidth + OUTER_BORDER_THICKNESS - ballWidth;
             const maxY = gameArea.clientHeight + OUTER_BORDER_THICKNESS - ballHeight;
 
 
-            if (newBallX < min) {
-                newBallX = min;
+            if (newBallX < minX) {
+                newBallX = minX;
                 velocityX *= CONFIG.BOUNCE_FACTOR;
             } else if (newBallX > maxX) {
                 newBallX = maxX;
                 velocityX *= CONFIG.BOUNCE_FACTOR;
             }
 
-            if (newBallY < min) {
-                newBallY = min;
+            if (newBallY < minY) {
+                newBallY = minY;
                 velocityY *= CONFIG.BOUNCE_FACTOR;
             } else if (newBallY > maxY) {
                 newBallY = maxY;
@@ -550,7 +543,7 @@
 
         // --- Collision Logic ---
         function checkCollisions() {
-            // Use internal game area coordinates (ballX, ballY) for all collision checks.
+            // All coordinates here (ballX, ballY, trapLeft, goalTop, etc.) are relative to the top-left of the gameArea.
             const ballSize = ball.offsetWidth;
             const ballCenter = { 
                 x: ballX + ballSize / 2, 
